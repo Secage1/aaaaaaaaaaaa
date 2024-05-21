@@ -1,0 +1,79 @@
+from cryptography.fernet import Fernet
+import os
+
+def generate_key():
+    return Fernet.generate_key()
+
+
+def save_key_to_file(key):
+    with open("key.txt", "wb") as file:
+        file.write(key)
+
+
+def load_key_from_file():
+    with open("key.txt", "rb") as file:
+        return file.read()
+
+
+def encrypt_message(message, key):
+    fernet = Fernet(key)
+    encrypted_message = fernet.encrypt(message.encode())
+    return encrypted_message
+
+
+def decrypt_message(encrypted_message, key):
+    fernet = Fernet(key)
+    decrypted_message = fernet.decrypt(encrypted_message).decode()
+    return decrypted_message
+
+
+def create_account():
+    name = input("İsminizi girin: ")
+    password = input("Şifrenizi girin: ")
+
+    # Eğer daha önce bir anahtar oluşturulmadıysa yeni bir anahtar oluştur
+    if not os.path.exists("key.txt"):
+        key = generate_key()
+        save_key_to_file(key)
+    else:
+        key = load_key_from_file()
+
+    # Şifrelenmiş şifreyi oluştur
+    encrypted_password = encrypt_message(password, key)
+
+    # Bilgileri dosyaya yaz
+    with open("accounts.txt", "a") as file:
+        file.write(f"{name},{encrypted_password.decode()}\n")
+    print("Hesap başarıyla oluşturuldu.")
+
+
+def login():
+    # Anahtar dosyadan yükleniyor
+    key = load_key_from_file()
+
+    username = input("Kullanıcı adınızı girin: ")
+    password = input("Şifrenizi girin: ")
+
+    # Kullanıcı adı ve şifre doğrulaması için dosyayı kontrol et
+    with open("accounts.txt", "r") as file:
+        for line in file:
+            name, encrypted_password = line.strip().split(",")
+            decrypted_password = decrypt_message(encrypted_password.encode(), key)
+            if name == username and decrypted_password == password:
+                print("Hesaba başarıyla giriş yapıldı.")
+                return
+    print("Hatalı veya eksik giriş yaptınız.")
+
+
+def main():
+    choice = input("Yeni hesap mı açmak istiyorsunuz giriş yapmak mı? (Y/G): ")
+    if choice.upper() == "Y":
+        create_account()
+    elif choice.upper() == "G":
+        login()
+    else:
+        print("Geçersiz seçim.")
+
+
+if __name__ == "__main__":
+    main()
